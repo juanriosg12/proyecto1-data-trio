@@ -70,17 +70,18 @@ def update_graph(xaxis_column_name, yaxis_column_name):
     # Añadir título a la gráfica
     fig.update_layout(
         title=f'Dispersión de {yaxis_column_name} vs {xaxis_column_name}',  # Título dinámico basado en los ejes seleccionados
-        margin={'l': 40, 'b': 40, 't': 40, 'r': 0},  # Aumentar el margen superior para que el título tenga más espacio
-        hovermode='closest'
+        margin={'l': 60, 'b': 60, 't': 60, 'r': 0},  # Aumentar el margen superior para que el título tenga más espacio
+        hovermode='closest',
+        plot_bgcolor='rgba(0, 0, 0, 0)',
     )
 
     # Configuración del eje X
     fig.update_xaxes(title=x_options.get(xaxis_column_name, xaxis_column_name), 
-                     type='linear')
+                     type='linear',ticks='outside', showline=True, gridcolor='lightgrey', linecolor='black',)
 
     # Configuración del eje Y
     fig.update_yaxes(title='Demanda Bicicletas', 
-                     type='linear')
+                     type='linear',ticks='outside', showline=True, gridcolor='lightgrey', linecolor='black',)
 
     return fig
 
