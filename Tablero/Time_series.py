@@ -13,7 +13,8 @@ datab = pd.read_csv(r"C:\Users\USER\OneDrive - Universidad de los andes\Analitic
 datab['Date'] = pd.to_datetime(datab['Date'], format='%d/%m/%Y')
 
 # Añadir columna con el día de la semana
-datab['DayOfWeek'] = datab['Date'].dt.day_name()
+datab['Día de la Semana'] = datab['Date'].dt.day_name()
+
 
 # Estilos externos
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
@@ -24,7 +25,12 @@ server = app.server
 
 # Layout de la app con DatePickerSingle
 app.layout = html.Div(children=[
-    html.H1(children='Cantidad de Bicicletas Rentadas por Hora y Día de la Semana'),
+    html.H1(children='Demandada de Bicicletas por Hora'),
+    
+    html.Div(
+        children='Seleccione una fecha para visualizar la demanda de bicicletas:',
+        style={'margin-bottom': '10px'}  # Añadir margen para separar del DatePicker
+    ),
 
     dcc.DatePickerSingle(
         id='date-picker-single',
@@ -51,12 +57,30 @@ def update_graph(selected_date):
     # Filtrar datos por la fecha seleccionada
     filtered_data = datab[datab['Date'].dt.date == pd.to_datetime(selected_date).date()]
     
-    # Crear el boxplot
+    # Crear el gráfico
     fig = px.line(filtered_data, 
                  x="Hour", 
                  y="Rented Bike Count", 
-                 color="DayOfWeek", 
+                 color="Día de la Semana", 
+                 markers= True,
+                 color_discrete_map = {"Día de la Semana": "red"},
                  title=f"Bicicletas Rentadas por Hora en {selected_date}")
+    
+    fig.update_xaxes(
+        mirror=True,
+        ticks='outside',
+        showline=False,
+        gridcolor='lightgrey',
+        title="Hora"  # Título del eje x
+    )
+
+    fig.update_yaxes(
+        mirror=True,
+        ticks='outside',
+        showline=False,
+        gridcolor='lightgrey',
+        title='Demanda de Bicicletas'  # Título del eje y
+    )
     
     return fig
 
