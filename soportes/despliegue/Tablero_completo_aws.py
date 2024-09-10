@@ -2,14 +2,35 @@ import dash
 from dash import dcc, html
 from dash.dependencies import Input, Output
 import plotly.express as px
+import plotly.graph_objs as go
 import pandas as pd
+import numpy as np
+import statsmodels.api as sm
 
 # Leer el archivo CSV
-datab = pd.read_csv("SeoulBikeData_utf8.csv")
+datab = pd.read_csv("SeoulBikeData_limpio.csv")
 
 # Convertir la columna 'Date' a formato de fecha
-datab['Date'] = pd.to_datetime(datab['Date'], format='%d/%m/%Y')
+datab['Date'] = pd.to_datetime(datab['Date'])
 datab['Día de la Semana'] = datab['Date'].dt.day_name()
+
+# Entrenar el modelo ARIMA para el pronóstico
+data1 = datab.copy()
+data1 = data1.sort_values(by=["Date","Hour"], ascending=True)
+data1['Date'] = pd.to_datetime(data1['Date'])
+data1.set_index('Date', inplace=True)
+
+
+model = sm.tsa.ARIMA(data1['Rented Bike Count'], order=(5, 1, 0))
+model_fit = model.fit()
+
+# Pronosticar los próximos 50 períodos
+forecast = model_fit.get_forecast(steps=50)
+forecast_index = pd.date_range(start=data1.index[-1], periods=51, freq='D')[1:]
+
+# Obtener predicciones y errores estándar
+forecast_mean = forecast.predicted_mean
+forecast_ci = forecast.conf_int()
 
 # Estilos externos
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
@@ -35,7 +56,16 @@ x_options = {
     'Solar Radiation (MJ/m2)': 'Radiación Solar (MJ/m2)'
 }
 
-# Layout de la aplicación con las tres visualizaciones en una columna
+season_value_map = {
+    3:'Winter',
+    0:'Autumn',
+    2:'Summer',
+    1:'Spring'
+}
+
+datab['Season Value'] = datab['Seasons'].map(season_value_map)
+
+# Layout de la aplicación con las cuatro visualizaciones
 app.layout = html.Div(children=[
     # Título del Dashboard
     html.H1(children='Demanda de Bicicletas en Seúl', style={'text-align': 'center', }),
@@ -45,13 +75,19 @@ app.layout = html.Div(children=[
         html.H2('Demanda de Bicicletas por Estación'),
         dcc.Graph(
             id='graph-rented-bikes-seasons',
-            figure=px.histogram(datab, x='Seasons', y='Rented Bike Count', color='Seasons', text_auto=True,  color_discrete_map=color_map)
+            figure=px.histogram(datab, x='Seasons', y='Rented Bike Count', color='Season Value', text_auto=True,
+                                color_discrete_map=color_map)  # Colores personalizados
                    .update_layout(
                        plot_bgcolor='rgba(0, 0, 0, 0)',
                        xaxis_title="Estaciones",
                        yaxis_title='Demanda de Bicicletas',
                        xaxis=dict(mirror=True, ticks='outside', gridcolor='lightgrey'),
-                       yaxis=dict(mirror=True, ticks='outside', gridcolor='lightgrey')
+                       yaxis=dict(mirror=True, ticks='outside', gridcolor='lightgrey'),
+                       coloraxis_colorbar=dict(
+                           title="Valor de la Estación",
+                           tickvals=[0, 1, 2, 3],
+                           ticktext=['Autumn (0)', 'Spring (1)', 'Summer (2)', 'Winter (3)']
+                       )
                    )
         )
     ], style={'margin-bottom': '40px'}),
@@ -82,6 +118,12 @@ app.layout = html.Div(children=[
         ], style={'width': '100%', 'display': 'inline-block'}),
         
         dcc.Graph(id='indicator-graphic')
+    ], style={'margin-bottom': '40px'}),
+    
+    # Cuarta visualización: Pronóstico de demanda con ARIMA
+    html.Div([
+        html.H2('Pronóstico de la Demanda de Bicicletas con ARIMA'),
+        dcc.Graph(id='forecast-graph')
     ])
 ])
 
@@ -127,6 +169,38 @@ def update_graph_climate(xaxis_column_name):
     )
     
     return fig
+
+# Callback para generar el gráfico de pronóstico
+@app.callback(
+    Output('forecast-graph', 'figure'),
+    [Input('forecast-graph', 'id')]
+)
+def update_forecast_graph(_):
+    # Gráfico con Plotly
+    trace_actual = go.Scatter(x=data1.index, y=data1['Rented Bike Count'], mode='lines', name='Valor Actual')
+    trace_forecast = go.Scatter(x=forecast_index, y=forecast_mean, mode='lines', name='Pronóstico', line=dict(color='red'))
+    trace_ci = go.Scatter(
+        x=np.concatenate([forecast_index, forecast_index[::-1]]), 
+        y=np.concatenate([forecast_ci.iloc[:, 0], forecast_ci.iloc[:, 1][::-1]]),
+        fill='toself',
+        fillcolor='rgba(255, 182, 193, 0.3)',  # Color rosa semitransparente
+        line=dict(color='rgba(255,255,255,0)'),
+        hoverinfo="skip",
+        showlegend=False
+    )
+    
+    layout = go.Layout(
+        title='Pronóstico de Demanda de Bicicletas con ARIMA (50 periodos siguientes)',
+        xaxis=dict(title='Fecha'),
+        yaxis=dict(title='Demanda'),
+        plot_bgcolor='rgba(0, 0, 0, 0)',
+        hovermode='x'
+    )
+    
+    return {
+        'data': [trace_actual, trace_forecast, trace_ci],
+        'layout': layout
+    }
 
 # Ejecutar la app
 if __name__ == '__main__':
