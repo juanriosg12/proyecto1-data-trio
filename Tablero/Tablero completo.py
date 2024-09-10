@@ -38,7 +38,7 @@ x_options = {
 # Layout de la aplicación con las tres visualizaciones en una columna
 app.layout = html.Div(children=[
     # Título del Dashboard
-    html.H1(children='Demanda de Bicicletas en Seúl', style={'text-align': 'center'}),
+    html.H1(children='Demanda de Bicicletas en Seúl', style={'text-align': 'center', }),
 
     # Primera visualización: Histograma de demanda de bicicletas por estación
     html.Div([
