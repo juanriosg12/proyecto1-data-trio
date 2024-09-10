@@ -5,10 +5,10 @@ import plotly.express as px
 import pandas as pd
 
 # Leer el archivo CSV
-datab = pd.read_csv(r"C:\Users\USER\OneDrive - Universidad de los andes\Analitica comp\Proyecto\SeoulBikeData_utf8.csv")
+datab = pd.read_csv("data/SeoulBikeData_limpio.csv")
 
 # Convertir la columna 'Date' a formato de fecha
-datab['Date'] = pd.to_datetime(datab['Date'], format='%d/%m/%Y')
+datab['Date'] = pd.to_datetime(datab['Date'])
 datab['Día de la Semana'] = datab['Date'].dt.day_name()
 
 # Estilos externos
@@ -35,6 +35,15 @@ x_options = {
     'Solar Radiation (MJ/m2)': 'Radiación Solar (MJ/m2)'
 }
 
+season_value_map = {
+    3:'Winter',
+    0:'Autumn',
+    2:'Summer',
+    1:'Spring'
+}
+
+datab['Season Value'] = datab['Seasons'].map(season_value_map)
+
 # Layout de la aplicación con las tres visualizaciones en una columna
 app.layout = html.Div(children=[
     # Título del Dashboard
@@ -42,19 +51,25 @@ app.layout = html.Div(children=[
 
     # Primera visualización: Histograma de demanda de bicicletas por estación
     html.Div([
-        html.H2('Demanda de Bicicletas por Estación'),
-        dcc.Graph(
-            id='graph-rented-bikes-seasons',
-            figure=px.histogram(datab, x='Seasons', y='Rented Bike Count', color='Seasons', text_auto=True,  color_discrete_map=color_map)
-                   .update_layout(
-                       plot_bgcolor='rgba(0, 0, 0, 0)',
-                       xaxis_title="Estaciones",
-                       yaxis_title='Demanda de Bicicletas',
-                       xaxis=dict(mirror=True, ticks='outside', gridcolor='lightgrey'),
-                       yaxis=dict(mirror=True, ticks='outside', gridcolor='lightgrey')
+    html.H2('Demanda de Bicicletas por Estación'),
+    dcc.Graph(
+        id='graph-rented-bikes-seasons',
+        figure=px.histogram(datab, x='Seasons', y='Rented Bike Count', color='Season Value', text_auto=True,
+                            color_discrete_map=color_map)  # Colores personalizados
+               .update_layout(
+                   plot_bgcolor='rgba(0, 0, 0, 0)',
+                   xaxis_title="Estaciones",
+                   yaxis_title='Demanda de Bicicletas',
+                   xaxis=dict(mirror=True, ticks='outside', gridcolor='lightgrey'),
+                   yaxis=dict(mirror=True, ticks='outside', gridcolor='lightgrey'),
+                   coloraxis_colorbar=dict(
+                       title="Valor de la Estación",
+                       tickvals=[0, 1, 2, 3],
+                       ticktext=['Autumn (0)', 'Spring (1)', 'Summer (2)', 'Winter (3)']
                    )
-        )
-    ], style={'margin-bottom': '40px'}),
+               )
+    )
+], style={'margin-bottom': '40px'}),
     
     # Segunda visualización: Línea de demanda por hora y fecha seleccionada
     html.Div([
